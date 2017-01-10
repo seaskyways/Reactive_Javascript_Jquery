@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Merriam Webster Dictionary</title>
+    <script src="../js/jquery3.js"></script>
+    <script src="../js/rxjs.js"></script>
+    <script src="../js/rx.dom.js"></script>
+    <!--<script src="../js/angular.js"></script>-->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="container">
+
+<div>
+    <input class="form-control" id="searchBox" type="text" placeholder="Enter you word here">
+</div>
+<br>
+<table class="table table-bordered" id="resultsContainer">
+    <thead>
+    <tr>
+        <th>Word</th>
+        <th>Meaning</th>
+    </tr>
+    </thead>
+    <tbody id="wordsContainer">
+    <!--<tr ng-repeat="word in words">-->
+    <!--<td></td>-->
+    <!--</tr>-->
+    </tbody>
+</table>
+
+<h1 id="loading">LOADING</h1>
+<h3 id="out"></h3>
+<!--<h3>{{words}}</h3>-->
+
+</body>
+
+<script>
+    function l(s) {
+        console.log(s)
+    }
+
+
+    var dictionaryLoaded = new Rx.AsyncSubject();
+    var wordsSubject = new Rx.BehaviorSubject();
+    var lastWord = "";
+    var wordInputObservable = Rx.DOM.keyup(document.getElementById("searchBox"))
+        .pluck('target', 'value')
+        .debounce(50);
+
+
+    var initialsMap = {};
+
+    var $container = $("#wordsContainer");
+    var output = $("#out");
+
+    var mDictionary;
+    var dictionaryKeys = [];
+
+
+    function Clear() {
+        return this;
+    }
+
+    var __clear = new Clear();
+
+    function clearInstance() {
+        return __clear
+    }
+
+    function Word(word, meaning) {
+        this.word = word;
+        this.meaning = meaning;
+
+        this.asRow = function () {
+            return "" +
+                "<tr>" +
+                "<td>" + this.word + "</td>" +
+                "<td>" + this.meaning + "</td>" +
+                "</tr>" +
+                ""
+        };
+
+        return this;
+    }
+
+    function MeaninglessWord(word) {
+        return
+    }
+
+    $.getJSON("../js/merriam_webseter_dictionary.json", {}, function (data, status) {
+        mDictionary = data;
+        dictionaryLoaded.onCompleted();
+    });
+
+    dictionaryLoaded.subscribeOnCompleted(function () {
+        $.each(mDictionary, function (key, value) {
+            dictionaryKeys.push(key)
+        });
+        dictionaryKeys.sort();
+
+        var lastInitial = null;
+        $.each(dictionaryKeys, function (index, value) {
+            var firstChar = value.charAt(0);
+            if (firstChar != lastInitial) {
+                lastInitial = value;
+                initialsMap[firstChar] = [value];
+            } else {
+                initialsMap[lastInitial].push(value)
+            }
+        });
+
+
+        $("#loading").hide();
+        console.log("completed loading merriams");
+    });
+
+    var absoluteWordsSubject = wordsSubject
+        .filter(function (e) {
+            return (e instanceof Word)
+        });
+
+    var clearSubject = wordsSubject
+        .filter(function (e) {
+            return (e instanceof Clear)
+        });
+
+    absoluteWordsSubject
+        .subscribeOn(Rx.Scheduler.default)
+        .filter(function (wordObject) {
+            return wordObject.meaning == null;
+        })
+        .map(function (wordObject) {
+            return wordObject.word
+        })
+        .flatMap(function (word) {
+            var firstChar = word.charAt(0);
+            var arrayToSearch = initialsMap[firstChar.toUpperCase()];
+            if (arrayToSearch != null) {
+                return Rx.Observable.from(arrayToSearch)
+                    .subscribeOn(Rx.Scheduler.default)
+                    .observeOn(Rx.Scheduler.default)
+                    .filter(function (key) {
+                        return key.indexOf(word.toUpperCase()) != -1
+                    })
+                    .takeUntil(clearSubject)
+                    .map(function (filteredKey) {
+                        return new Word(filteredKey, mDictionary[filteredKey])
+                    });
+            }
+            else {
+                return Rx.Observable.empty()
+            }
+        })
+        .subscribe(function (wordObject) {
+            $container.append(wordObject.asRow())
+        }, function (e) {
+            l(e)
+        });
+
+    clearSubject.subscribe(function () {
+        l("Clear received");
+        $container.empty()
+    });
+
+    wordInputObservable
+        .subscribe(function (text) {
+            wordsSubject.onNext(clearInstance());
+
+            if (text.length != 0 && lastWord != text) {
+                wordsSubject.onNext(new Word(text, null));
+                l("sent out word : " + text);
+            }
+
+            lastWord = text;
+        });
+
+
+</script>
+
+</html>
