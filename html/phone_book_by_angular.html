@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Omran phonebook</title>
+    <script src="../js/jquery3.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+    <script src="../js/angular.js"></script>
+</head>
+<body class="container" ng-app="myApp" ng-controller="myCtrl">
+
+
+<input type="text" id="nameInput" placeholder="NAME..." ng-model="name">
+<input type="number" id="phoneNumberInput" placeholder="Phone..." ng-model="number">
+<button id="saveButton" ng-click="savePerson(name,number)">Save</button>
+
+<div class="row">
+    <div class="col-xs-12">
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone Number</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="person in people | orderBy : 'name'" ng-cloak
+                ng-hide="search != undefined && (search.length > 0 && (person.name.indexOf(search) == -1 || person.number.indexOf(search) == -1))">
+                <td>{{ person.name }}</td>
+                <td>{{ person.number }}</td>
+                <td>
+                    <button ng-click="removePerson(person)">Remove</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <input type="text" placeholder="SEARCH..." ng-model="search" ng-init="search = ''" ng-show="people.length > 0" ng-cloak>
+    </div>
+</div>
+
+</body>
+
+<script>
+
+    function Person(name, number) {
+        this.name = name;
+        this.number = number;
+        return this;
+    }
+
+    angular.module("myApp", [])
+        .controller("myCtrl", function ($scope) {
+            $scope.people = [];
+
+            $scope.savePerson = function (inName, inNumber) {
+                if (inName == undefined || inName.length == 0) {
+                    alert("ENTER NAME");
+                    return;
+                }
+                if (inNumber == undefined || inNumber.length == 0) {
+                    alert("ENTER NUMBER");
+                    return;
+                }
+
+                for (var index in $scope.people) {
+                    var person = $scope.people[index];
+                    if (person.name == inName || person.number == inNumber) return;
+                }
+                $scope.people.push(new Person(inName, inNumber));
+                $scope.name = "";
+                $scope.number = "";
+            };
+
+            $scope.removePerson = function (person) {
+                $scope.people.splice($scope.people.indexOf(person), 1);
+            };
+        })
+
+</script>
+
+</html>

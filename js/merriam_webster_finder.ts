@@ -27,8 +27,12 @@ class MeaninglessWord extends Word {
     }
 }
 
-class Clear {
-    static instance = new Clear()
+class InsertWord extends Word {
+
+}
+
+class ClearWord extends Word {
+    static genericClear = new ClearWord(null, null)
 }
 
 class SortedSet {

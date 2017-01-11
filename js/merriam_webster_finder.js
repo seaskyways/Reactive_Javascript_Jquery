@@ -33,12 +33,21 @@ var MeaninglessWord = (function (_super) {
     }
     return MeaninglessWord;
 }(Word));
-var Clear = (function () {
-    function Clear() {
+var InsertWord = (function (_super) {
+    __extends(InsertWord, _super);
+    function InsertWord() {
+        _super.apply(this, arguments);
     }
-    Clear.instance = new Clear();
-    return Clear;
-}());
+    return InsertWord;
+}(Word));
+var ClearWord = (function (_super) {
+    __extends(ClearWord, _super);
+    function ClearWord() {
+        _super.apply(this, arguments);
+    }
+    ClearWord.genericClear = new ClearWord(null, null);
+    return ClearWord;
+}(Word));
 var SortedSet = (function () {
     function SortedSet(sortingFunction) {
         this.mArray = [];

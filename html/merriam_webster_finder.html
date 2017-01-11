@@ -52,7 +52,7 @@
 
     var dictionaryLoaded = new Rx.AsyncSubject();
     var meaninglessWordSubject = new Rx.BehaviorSubject();
-    var meaningfulWordSubject = new Rx.BehaviorSubject();
+    var insertWordSubject = new Rx.BehaviorSubject();
     var clearSubject = new Rx.BehaviorSubject();
 
     var letterInObservable = Rx.DOM.keyup(document.getElementById("searchBox"));
@@ -109,7 +109,7 @@
 
     letterInObservable.subscribe(function (letter) {
 //        if (!isBackspace(letter.which)) {
-        clearSubject.onNext(Clear.instance);
+        clearSubject.onNext(ClearWord.instance);
 //        }
     });
 
@@ -118,14 +118,12 @@
             if (text.length != 0 && lastWord != text) {
                 meaninglessWordSubject.onNext(new MeaninglessWord(text));
             } else {
-                clearSubject.onNext(Clear.instance)
+                clearSubject.onNext(ClearWord.instance)
             }
-
             lastWord = text;
         });
 
     meaninglessWordSubject
-    //        .subscribeOn(Rx.Scheduler.default)
         .filter(function (wordObject) {
             return wordObject instanceof MeaninglessWord && wordObject != undefined;
         })
@@ -144,44 +142,71 @@
                         return key.indexOf(uppercaseWord) != -1
                     })
                     .map(function (filteredKey) {
-                        return new Word(filteredKey, mDictionary[filteredKey])
+                        return new InsertWord(filteredKey, mDictionary[filteredKey])
                     })
                     .takeUntil(wordInputObservable);
-//                    .toArray()
-//                    .map(function (arrayOfResults) {
-//                        arrayOfResults.sort(function (a, b) {
-//                            if (a.word == uppercaseWord) return -1;
-//                            else if (b.word == uppercaseWord) return 1;
-//                            else {
-//                                return a.word.indexOf(uppercaseWord) - b.word.indexOf(uppercaseWord)
-//                            }
-//                        });
-//                        return arrayOfResults;
-//                    })
-//                    .takeUntil(wordInputObservable)
-//                    .flatMap(function (sortedArray) {
-//                        return Rx.Observable.from(sortedArray);
-//                    });
             }
             else {
                 return Rx.Observable.empty()
             }
         })
-        .subscribe(function (wordObject) {
-            meaningfulWordSubject.onNext(wordObject);
+        .subscribe(function (insertWordObject) {
+            insertWordSubject.onNext(insertWordObject);
         }, function (e) {
             l(e)
         });
 
-    clearSubject.subscribe(function () {
+    meaninglessWordSubject
+        .filter(function (wordObject) {
+            return wordObject instanceof MeaninglessWord && wordObject != undefined;
+        })
+        .map(function (wordObject) {
+            return wordObject.word
+        })
+        .flatMap(function (word) {
+            var firstChar = word.charAt(0);
+            var uppercaseWord = word.toUpperCase();
+            var arrayToSearch = initialsMap[firstChar.toUpperCase()];
+            if (arrayToSearch != null) {
+                return Rx.Observable.from(arrayToSearch)
+                    .subscribeOn(Rx.Scheduler.default)
+                    .observeOn(Rx.Scheduler.default)
+                    .filter(function (key) {
+                        return key.indexOf(uppercaseWord) == -1
+                    })
+                    .filter(function (key) {
+                        for (var word in currentWords.mArray) {
+                            if (word.word == key) return true
+                        }
+                        return false
+                    })
+                    .map(function (filteredKey) {
+                        return new ClearWord(filteredKey, mDictionary[filteredKey])
+                    })
+                    .takeUntil(wordInputObservable);
+            }
+            else {
+                return Rx.Observable.empty()
+            }
+        })
+        .subscribe(function (insertWordObject) {
+            clearSubject.onNext(insertWordObject);
+        }, function (e) {
+            l(e)
+        });
+
+    clearSubject.subscribe(function (clearWord) {
         l("Clear received");
         $container.empty();
-        currentWords.clear();
+        if (clearWord != ClearWord.genericClear) {
+            l(clearWord)
+        }
+//        currentWords.clear();
     });
 
-    meaningfulWordSubject
+    insertWordSubject
         .filter(function (e) {
-            return e instanceof Word && !(e instanceof MeaninglessWord);
+            return e instanceof InsertWord;
         })
         .filter(function (wordObject) {
             return !currentWords.contains(wordObject)
