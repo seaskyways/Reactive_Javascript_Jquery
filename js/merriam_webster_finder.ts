@@ -81,6 +81,14 @@ class SortedSet {
     public clear() {
         this.mArray = []
     }
+
+    public indexOf(e) {
+        return this.mArray.indexOf(e)
+    }
+
+    public contains(e) {
+        return this.indexOf(e) != -1
+    }
 }
 
 const mSortedSet = new SortedSet(function (a, b) {

@@ -70,7 +70,9 @@
             .pluck('target', 'value');
 
     var initialsMap = {};
-    var currentWords = [];
+    var currentWords = new SortedSet(function (a, b) {
+        return a.word.localeCompare(b.word)
+    });
 
     var $container = $("#wordsContainer");
     var output = $("#out");
@@ -144,22 +146,22 @@
                     .map(function (filteredKey) {
                         return new Word(filteredKey, mDictionary[filteredKey])
                     })
-                    .takeUntil(wordInputObservable)
-                    .toArray()
-                    .map(function (arrayOfResults) {
-                        arrayOfResults.sort(function (a, b) {
-                            if (a.word == uppercaseWord) return -1;
-                            else if (b.word == uppercaseWord) return 1;
-                            else {
-                                return a.word.indexOf(uppercaseWord) - b.word.indexOf(uppercaseWord)
-                            }
-                        });
-                        return arrayOfResults;
-                    })
-                    .takeUntil(wordInputObservable)
-                    .flatMap(function (sortedArray) {
-                        return Rx.Observable.from(sortedArray);
-                    });
+                    .takeUntil(wordInputObservable);
+//                    .toArray()
+//                    .map(function (arrayOfResults) {
+//                        arrayOfResults.sort(function (a, b) {
+//                            if (a.word == uppercaseWord) return -1;
+//                            else if (b.word == uppercaseWord) return 1;
+//                            else {
+//                                return a.word.indexOf(uppercaseWord) - b.word.indexOf(uppercaseWord)
+//                            }
+//                        });
+//                        return arrayOfResults;
+//                    })
+//                    .takeUntil(wordInputObservable)
+//                    .flatMap(function (sortedArray) {
+//                        return Rx.Observable.from(sortedArray);
+//                    });
             }
             else {
                 return Rx.Observable.empty()
@@ -174,7 +176,7 @@
     clearSubject.subscribe(function () {
         l("Clear received");
         $container.empty();
-        currentWords = [];
+        currentWords.clear();
     });
 
     meaningfulWordSubject
@@ -182,7 +184,7 @@
             return e instanceof Word && !(e instanceof MeaninglessWord);
         })
         .filter(function (wordObject) {
-            return currentWords.indexOf(wordObject) == -1
+            return !currentWords.contains(wordObject)
         })
         .subscribe(function (wordObject) {
             $container.append(wordObject.asRow());

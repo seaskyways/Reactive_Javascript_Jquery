@@ -81,6 +81,12 @@ var SortedSet = (function () {
     SortedSet.prototype.clear = function () {
         this.mArray = [];
     };
+    SortedSet.prototype.indexOf = function (e) {
+        return this.mArray.indexOf(e);
+    };
+    SortedSet.prototype.contains = function (e) {
+        return this.indexOf(e) != -1;
+    };
     return SortedSet;
 }());
 var mSortedSet = new SortedSet(function (a, b) {
